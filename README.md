@@ -12,6 +12,10 @@ A sophisticated AI-powered implementation of the classic Werewolf (Mafia) party 
 
 This project is an **automated simulation** of the Werewolf/Mafia party game where AI-controlled players compete against each other.
 
+## 🔗 Repository
+
+- Current repo: https://github.com/AkshUpase/WereWolf-AI-
+
 ### 🖼️ Game Interface
 
 ![Game Screenshot](assets/screenshot.png)
@@ -128,8 +132,8 @@ Werewolf (also called Mafia) is a deduction game where:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/Parag1337/WereWolf-AI-Game.git
-cd WereWolf-AI-Game
+git clone https://github.com/AkshUpase/WereWolf-AI-.git
+cd WereWolf-AI-
 ```
 
 ### Step 2: Create Virtual Environment (Recommended)
@@ -287,7 +291,7 @@ When voting, each AI player:
 ## 📁 Project Structure
 
 ```
-WereWolf-AI-Game/
+WereWolf-AI-/
 ├── main.py                 # Game entry point
 ├── ui.py                   # Tkinter UI and rendering (400+ lines)
 ├── engine.py               # Game engine and AI logic (500+ lines)
@@ -554,6 +558,9 @@ brew install python-tk
 
 - **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - Complete technical guide for developers
 - **[SIMPLE_EXPLANATION.md](SIMPLE_EXPLANATION.md)** - Beginner-friendly game explanation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Runtime architecture overview
+- **[GAMEPLAY.md](GAMEPLAY.md)** - Gameplay rules and flow
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development and validation notes
 - **[Code Comments](engine.py)** - Inline documentation in source files
 
 ---
@@ -582,15 +589,6 @@ Contributions are welcome! Here's how to contribute:
 ## 📄 License
 
 This project is licensed under the **MIT License** - see the LICENSE file for details.
-
----
-
-## 👨‍💻 Author
-
-**Aksh Upase7** - AI Game Developer
-
-Repository: 
-(https://github.com/AkshUpase/WereWolf-AI-)
 
 ---
 
@@ -624,6 +622,13 @@ Have questions or found a bug?
 - [ ] Web version (PyGame/WebGL)
 - [ ] Voice synthesis for dialogue
 - [ ] Advanced animation engine
+
+---
+
+## 👨‍💻 Made by
+
+- Aksh Upase
+- Vandan Sharma
 
 ---
 
