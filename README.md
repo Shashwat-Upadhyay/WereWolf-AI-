@@ -64,7 +64,7 @@ Werewolf (also called Mafia) is a deduction game where:
 ### Game Structure
 
 **Total Players: 8**
-- Good Team: 5 (4 Villagers, 1 Doctor, 1 Detective)
+- Good Team: 6 (4 Villagers, 1 Doctor, 1 Detective)
 - Evil Team: 2 (2 Werewolves)
 
 ### Game Phases
@@ -128,7 +128,7 @@ Werewolf (also called Mafia) is a deduction game where:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/Parag1337/WereWolf-AI-Game.git
+https://github.com/AkshUpase/WereWolf-AI-.git
 cd WereWolf-AI-Game
 ```
 
@@ -555,6 +555,27 @@ brew install python-tk
 - **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - Complete technical guide for developers
 - **[SIMPLE_EXPLANATION.md](SIMPLE_EXPLANATION.md)** - Beginner-friendly game explanation
 - **[Code Comments](engine.py)** - Inline documentation in source files
+
+---
+
+## 🧪 Testing, Performance, & Reliability
+
+To ensure stable, bug-free, and high-performance gameplay, the codebase has been heavily optimized and backed by a comprehensive test suite.
+
+### Performance Optimizations ⚡
+- **$O(n)$ Suspicions Aggregation**: Previously, AI target voting utilized nested loops calculating `average_suspicion()` on the fly, leading to $O(n^2)$ overhead constraints. This has been refactored utilizing dictionary aggregations to map player suspicion sums natively in $O(n)$ linear time!
+- **UI Render Debouncing**: The `ui.py` interface incorporates smart 15px logic-grid variance buffering for Tkinter canvas bounds resizing. This aggressively limits unneeded `scene_image_cache` purge cycles to eliminate memory bottlenecks and Garbage Collection lag during window resizing.
+
+### Pytest Verification Suite ✅
+An expansive automated test suite exists under the `/tests` boundary testing AI rulesets, edge cases natively, and rendering constraints entirely headlessly.
+```bash
+# Execute local test suite
+python -m pytest tests/
+```
+Included coverage tests:
+- `test_engine.py`: Validates deterministic game state behavior and edge role interactions.
+- `test_ai.py`: Validates bounds checking to prevent index and sequence errors natively during simulated extremes (0-player, 1-player).
+- `test_ui.py`: Tkinter mock coverage catching recursion lag limits silently.
 
 ---
 

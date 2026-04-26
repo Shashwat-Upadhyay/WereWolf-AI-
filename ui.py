@@ -150,8 +150,11 @@ class GameUI:
         """Handle canvas resize events."""
         width = max(1, int(event.width))
         height = max(1, int(event.height))
-        if (width, height) == self.scene_size:
+        
+        # Debounce cache-clearing memory locks by ignoring sub-15px jitter
+        if abs(width - self.scene_size[0]) < 15 and abs(height - self.scene_size[1]) < 15:
             return
+            
         self.scene_size = (width, height)
         self.scene_image_cache.clear()
         self.scene.coords(
