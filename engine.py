@@ -6,6 +6,7 @@ import random
 from collections import Counter, defaultdict
 from typing import Dict, List, Optional
 
+from config import MAX_PLAYER_COUNT, MIN_PLAYER_COUNT
 from models import Dialogue, Phase, Player, Role, ScriptEvent
 from utils import clamp
 
@@ -506,7 +507,7 @@ class GameEngine:
     """Main game engine for Werewolf/Mafia simulation."""
 
     def __init__(self, num_players: int = 8, ai_profile: str = "standard"):
-        self.num_players = max(6, min(12, num_players))
+        self.num_players = max(MIN_PLAYER_COUNT, min(MAX_PLAYER_COUNT, num_players))
         self.ai_profile = ai_profile
         self.day_number = 1
         self.phase = Phase.DAY

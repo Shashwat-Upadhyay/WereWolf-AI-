@@ -11,6 +11,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Dict, List
 
+from config import MAX_PLAYER_COUNT, MIN_PLAYER_COUNT
 from engine import GameEngine
 
 SUPPORTED_PROFILES = [
@@ -160,7 +161,7 @@ def main() -> None:
 
     output = run_experiments(
         num_matches=max(1, args.matches),
-        num_players=max(6, min(12, args.players)),
+        num_players=max(MIN_PLAYER_COUNT, min(MAX_PLAYER_COUNT, args.players)),
         profile=args.profile,
         seed=args.seed,
     )
