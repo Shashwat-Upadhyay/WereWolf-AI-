@@ -558,6 +558,27 @@ brew install python-tk
 
 ---
 
+## 🧪 Testing, Performance, & Reliability
+
+To ensure stable, bug-free, and high-performance gameplay, the codebase has been heavily optimized and backed by a comprehensive test suite.
+
+### Performance Optimizations ⚡
+- **$O(n)$ Suspicions Aggregation**: Previously, AI target voting utilized nested loops calculating `average_suspicion()` on the fly, leading to $O(n^2)$ overhead constraints. This has been refactored utilizing dictionary aggregations to map player suspicion sums natively in $O(n)$ linear time!
+- **UI Render Debouncing**: The `ui.py` interface incorporates smart 15px logic-grid variance buffering for Tkinter canvas bounds resizing. This aggressively limits unneeded `scene_image_cache` purge cycles to eliminate memory bottlenecks and Garbage Collection lag during window resizing.
+
+### Pytest Verification Suite ✅
+An expansive automated test suite exists under the `/tests` boundary testing AI rulesets, edge cases natively, and rendering constraints entirely headlessly.
+```bash
+# Execute local test suite
+python -m pytest tests/
+```
+Included coverage tests:
+- `test_engine.py`: Validates deterministic game state behavior and edge role interactions.
+- `test_ai.py`: Validates bounds checking to prevent index and sequence errors natively during simulated extremes (0-player, 1-player).
+- `test_ui.py`: Tkinter mock coverage catching recursion lag limits silently.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Here's how to contribute:

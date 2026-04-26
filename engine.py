@@ -462,7 +462,20 @@ class GameEngine:
         if not candidates:
             return None
 
-        target_id = min(candidates, key=self.average_suspicion)
+        # O(n) pre-calculation of average suspicion
+        suspicion_sums = defaultdict(float)
+        suspicion_counts = defaultdict(int)
+        for pid, brain in self.ai.items():
+            if self.players[pid].is_alive:
+                for cand_id in candidates:
+                    if cand_id != pid:
+                        suspicion_sums[cand_id] += brain.suspicion.get(cand_id, 0.18)
+                        suspicion_counts[cand_id] += 1
+                        
+        def fast_avg(tid):
+            return suspicion_sums[tid] / suspicion_counts[tid] if suspicion_counts[tid] else 0.18
+
+        target_id = min(candidates, key=fast_avg)
         self.cached_werewolf_target = target_id
         return target_id
 
