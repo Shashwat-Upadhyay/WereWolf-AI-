@@ -281,7 +281,7 @@ class GameUI:
             bg=COLORS["surface"],
             fg=COLORS["text"],
             relief=tk.FLAT,
-            height=18,
+            height=14,
             wrap=tk.WORD,
             padx=10,
             pady=10,
@@ -496,7 +496,7 @@ class GameUI:
             row = tk.Frame(
                 self.player_list_frame, bg=COLORS["surface"], cursor="hand2"
             )
-            row.pack(fill=tk.X, pady=8, padx=0)
+            row.pack(fill=tk.X, pady=4, padx=0)
 
             # Avatar (48x48)
             icon_image = self.images.get(f"{player.avatar_key}_small")
@@ -882,13 +882,13 @@ class GameUI:
             canvas.create_rectangle(
                 72,
                 y - 8,
-                72 + 178 * clamp(suspicion),
+                72 + 164 * clamp(suspicion),
                 y + 8,
                 fill=fill,
                 outline="",
             )
             canvas.create_text(
-                282,
+                272,
                 y,
                 anchor="e",
                 text=f"{suspicion:.0%}",
