@@ -64,7 +64,7 @@ Werewolf (also called Mafia) is a deduction game where:
 ### Game Structure
 
 **Total Players: 8**
-- Good Team: 5 (4 Villagers, 1 Doctor, 1 Detective)
+- Good Team: 6 (4 Villagers, 1 Doctor, 1 Detective)
 - Evil Team: 2 (2 Werewolves)
 
 ### Game Phases
