@@ -71,10 +71,10 @@ The game alternates between **DAY** and **NIGHT**:
 ### Running the Game
 
 ```bash
-# Navigate to the game folder
-cd '/home/parag/Downloads/AI CP'
+# Navigate to repository folder
+cd /path/to/WereWolf-AI-
 
-# Run the game
+# Run the game UI
 python main.py
 ```
 

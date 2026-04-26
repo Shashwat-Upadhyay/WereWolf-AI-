@@ -12,6 +12,10 @@ A sophisticated AI-powered implementation of the classic Werewolf (Mafia) party 
 
 This project is an **automated simulation** of the Werewolf/Mafia party game where AI-controlled players compete against each other.
 
+## 🔗 Repository
+
+- Current repo: https://github.com/AkshUpase/WereWolf-AI-
+
 ### 🖼️ Game Interface
 
 ![Game Screenshot](assets/screenshot.png)
@@ -26,8 +30,11 @@ The interface shows the animated game board, AI player interactions, suspicion m
 - [Features](#-features)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
+- [Examiner Quick Start](#-examiner-quick-start)
 - [Game Controls](#-game-controls)
 - [How AI Works](#-how-ai-works)
+- [Final-Year Project Framing](#-final-year-project-framing)
+- [Experiments & Evaluation](#-experiments--evaluation)
 - [Project Structure](#-project-structure)
 - [Architecture](#-architecture)
 - [Configuration](#-configuration)
@@ -106,11 +113,14 @@ Werewolf (also called Mafia) is a deduction game where:
 - **Dynamic Backgrounds**: Day/Night visual transitions
 - **Player Avatar Display**: Visual representation of each player
 - **Animated Events**: Vote arrows, shield flashes, reveal pulses
+- **Cinematic Event Overlays**: Hunt/rescue pulses, phase title transitions, impact bursts
 - **Color-Coded Roles**: Each role has a distinct color in the UI
 
 ### Game Features
 - **Auto-play Mode**: Let the game play itself without interaction
 - **Manual Control**: Step through each phase with keyboard controls
+- **Speed Control**: 0.5x to 2.0x pace for animations/script playback and autoplay timing
+- **Built-in Sound Cues**: Event beeps for kills, rescues, phase changes, and winner reveal
 - **Game Logging**: Complete transcript of all actions and dialogue
 - **Player Selection**: Click players to view their suspicion meters
 - **Live Suspicion Meter**: Real-time visualization of how suspicious each player is
@@ -128,8 +138,8 @@ Werewolf (also called Mafia) is a deduction game where:
 ### Step 1: Clone the Repository
 
 ```bash
-https://github.com/AkshUpase/WereWolf-AI-.git
-cd WereWolf-AI-Game
+git clone https://github.com/AkshUpase/WereWolf-AI-.git
+cd WereWolf-AI-
 ```
 
 ### Step 2: Create Virtual Environment (Recommended)
@@ -190,6 +200,33 @@ A window will open with:
 
 ---
 
+## 🧪 Examiner Quick Start
+
+### 1) Run the game UI
+```bash
+python main.py
+```
+
+### 2) Run automated checks
+```bash
+python -m compileall .
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+### 3) Run reproducible experiments
+```bash
+python experiments.py \
+  --matches 200 \
+  --players 8 \
+  --profile standard \
+  --seed 1234 \
+  --json-out results/summary.json \
+  --csv-out results/matches.csv \
+  --timeline-out results/timeline.json
+```
+
+---
+
 ## 🎮 Game Controls
 
 | Key/Button | Action | Use Case |
@@ -197,6 +234,7 @@ A window will open with:
 | **Space** or **F5** | Advance to next phase | Move game forward |
 | **F6** | Toggle Auto-play | Let AI play automatically |
 | **F2** | Start New Game | Reset with new roles |
+| **F7 / F8** | Decrease / Increase speed | Control animation and script pace |
 | **Click Player Name** | Select player | View their suspicion meter |
 | **Mouse Scroll** | Scroll game log | Read past messages |
 
@@ -284,10 +322,72 @@ When voting, each AI player:
 
 ---
 
+## 🎓 Final-Year Project Framing
+
+### Problem statement
+Build an explainable AI-driven social deduction simulator and evaluate how heuristic reasoning quality affects game outcomes.
+
+### Objectives
+- Design interpretable role-aware AI agents for Werewolf/Mafia
+- Measure quality using reproducible, large-batch headless simulations
+- Compare standard strategy against baseline and ablation profiles
+- Present clear methodology, results, limitations, and future work
+
+### Methodology
+- Implement strategy profiles in the same engine for fair comparison
+- Run seeded batches with identical player counts and comparable conditions
+- Report:
+  - Village/Werewolf win rates
+  - Average game length
+  - Vote accuracy (votes targeting werewolves)
+  - False accusation rate
+  - Role survival rates
+
+### Baselines and ablations
+- `baseline_random` (random decisions)
+- `baseline_majority` (follow prior vote majority)
+- `ablation_no_memory` (no trust/suspicion memory updates)
+- `ablation_role_agnostic` (limited role-specific reasoning)
+
+### Limitations
+- Heuristic agents (not ML-trained)
+- No human-in-the-loop gameplay evaluation
+- UI replay summary is exported as timeline JSON (no dedicated timeline widget yet)
+
+### Future work
+- Learning-based policies and adaptive meta-strategy
+- Human-vs-AI or mixed-lobby mode
+- Advanced experiment dashboards and visual analytics
+
+---
+
+## 📈 Experiments & Evaluation
+
+Run single-profile batch:
+```bash
+python experiments.py --matches 500 --players 8 --profile standard --seed 1234
+```
+
+Compare profile variants:
+```bash
+python experiments.py --matches 500 --profile standard --seed 1234
+python experiments.py --matches 500 --profile baseline_random --seed 1234
+python experiments.py --matches 500 --profile baseline_majority --seed 1234
+python experiments.py --matches 500 --profile ablation_no_memory --seed 1234
+python experiments.py --matches 500 --profile ablation_role_agnostic --seed 1234
+```
+
+Outputs:
+- `results/summary.json` → aggregate metrics + all match summaries
+- `results/matches.csv` → compact per-match table
+- `results/timeline.json` → per-turn key events (demo/replay summary artifact)
+
+---
+
 ## 📁 Project Structure
 
 ```
-WereWolf-AI-Game/
+WereWolf-AI-/
 ├── main.py                 # Game entry point
 ├── ui.py                   # Tkinter UI and rendering (400+ lines)
 ├── engine.py               # Game engine and AI logic (500+ lines)
@@ -295,12 +395,17 @@ WereWolf-AI-Game/
 ├── animations.py           # Animation system (vote, death, reveal, etc.)
 ├── config.py               # Configuration (colors, sizes, asset paths)
 ├── utils.py                # Utility functions (asset loading, math)
+├── experiments.py          # Headless evaluation runner (batch + metrics + exports)
+├── tests/                  # Unit tests for game logic
+│   └── test_engine.py
 ├── assets/                 # Game images and sprites
 │   ├── dayBackground.png
 │   ├── nightBackground.png
 │   ├── villager.png
 │   ├── werewolf.png
 │   └── bonefire.png
+├── .github/workflows/ci.yml # CI compile + unit tests
+├── requirements.txt        # Runtime dependency declaration
 ├── .gitignore              # Git ignore file
 ├── README.md               # This file
 ├── PROJECT_GUIDE.md        # Detailed technical guide
@@ -554,6 +659,10 @@ brew install python-tk
 
 - **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - Complete technical guide for developers
 - **[SIMPLE_EXPLANATION.md](SIMPLE_EXPLANATION.md)** - Beginner-friendly game explanation
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Runtime architecture overview
+- **[GAMEPLAY.md](GAMEPLAY.md)** - Gameplay rules and flow
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development and validation notes
+- **[experiments.py](experiments.py)** - Reproducible evaluation runner and exports
 - **[Code Comments](engine.py)** - Inline documentation in source files
 
 ---
@@ -606,15 +715,6 @@ This project is licensed under the **MIT License** - see the LICENSE file for de
 
 ---
 
-## 👨‍💻 Author
-
-**Aksh Upase7** - AI Game Developer
-
-Repository: 
-(https://github.com/AkshUpase/WereWolf-AI-)
-
----
-
 ## 🙏 Acknowledgments
 
 - Classic Werewolf/Mafia game design
@@ -645,6 +745,13 @@ Have questions or found a bug?
 - [ ] Web version (PyGame/WebGL)
 - [ ] Voice synthesis for dialogue
 - [ ] Advanced animation engine
+
+---
+
+## 👨‍💻 Made by
+
+- Aksh Upase
+- Vandan Sharma
 
 ---
 

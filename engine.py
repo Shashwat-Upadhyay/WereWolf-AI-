@@ -6,6 +6,7 @@ import random
 from collections import Counter, defaultdict
 from typing import Dict, List, Optional
 
+from config import MAX_PLAYER_COUNT, MIN_PLAYER_COUNT
 from models import Dialogue, Phase, Player, Role, ScriptEvent
 from utils import clamp
 
@@ -363,11 +364,151 @@ class Detective(AIPlayer):
         return max(pool, key=lambda pid: self.suspicion.get(pid, 0.18))
 
 
+class RandomBaselineAI(AIPlayer):
+    """Random baseline for comparative experiments."""
+
+    def make_day_dialogue(self, engine: "GameEngine") -> Dialogue:
+        target_id = random.choice(self._living_candidates(engine)) if self._living_candidates(engine) else None
+        if target_id is None:
+            return Dialogue(self.player.id, random.choice(self.info_lines), "info", None)
+        return Dialogue(self.player.id, f"I suspect Player {target_id}.", "accuse", target_id)
+
+    def vote(self, engine: "GameEngine") -> int:
+        candidates = self._living_candidates(engine)
+        return random.choice(candidates) if candidates else self.player.id
+
+    def night_action(self, engine: "GameEngine") -> Optional[int]:
+        candidates = self._living_candidates(engine)
+        return random.choice(candidates) if candidates else None
+
+
+class RandomBaselineWerewolf(RandomBaselineAI):
+    """Random baseline werewolf that avoids selecting fellow werewolves."""
+
+    def __init__(self, player: Player, player_ids: List[int], pack_ids: List[int]):
+        super().__init__(player, player_ids)
+        self.pack_ids = set(pack_ids)
+
+    def vote(self, engine: "GameEngine") -> int:
+        candidates = [
+            pid for pid in self._living_candidates(engine) if pid not in self.pack_ids
+        ]
+        return random.choice(candidates) if candidates else self.player.id
+
+    def night_action(self, engine: "GameEngine") -> Optional[int]:
+        candidates = [
+            pid for pid in self._living_candidates(engine) if pid not in self.pack_ids
+        ]
+        return random.choice(candidates) if candidates else None
+
+
+class MajorityFollowerAI(AIPlayer):
+    """Simple baseline that follows last-day majority target when possible."""
+
+    def vote(self, engine: "GameEngine") -> int:
+        candidates = self._living_candidates(engine)
+        if not candidates:
+            return self.player.id
+        if engine.last_votes:
+            tally = Counter(engine.last_votes.values())
+            likely_targets = [pid for pid, _count in tally.most_common() if pid in candidates]
+            if likely_targets:
+                return likely_targets[0]
+        return random.choice(candidates)
+
+
+class MajorityFollowerWerewolf(MajorityFollowerAI):
+    """Majority follower variant for werewolves that avoids pack votes."""
+
+    def __init__(self, player: Player, player_ids: List[int], pack_ids: List[int]):
+        super().__init__(player, player_ids)
+        self.pack_ids = set(pack_ids)
+
+    def vote(self, engine: "GameEngine") -> int:
+        candidates = [
+            pid for pid in self._living_candidates(engine) if pid not in self.pack_ids
+        ]
+        if not candidates:
+            return self.player.id
+        if engine.last_votes:
+            tally = Counter(engine.last_votes.values())
+            likely_targets = [pid for pid, _count in tally.most_common() if pid in candidates]
+            if likely_targets:
+                return likely_targets[0]
+        return random.choice(candidates)
+
+    def night_action(self, engine: "GameEngine") -> Optional[int]:
+        candidates = [
+            pid for pid in self._living_candidates(engine) if pid not in self.pack_ids
+        ]
+        return random.choice(candidates) if candidates else None
+
+
+class NoMemoryMixin:
+    """Ablation mixin that disables suspicion/trust memory updates."""
+
+    def observe_dialogue(self, dialogue: Dialogue, engine: "GameEngine") -> None:
+        return
+
+    def observe_votes(
+        self,
+        votes: Dict[int, int],
+        eliminated_id: Optional[int],
+        engine: "GameEngine",
+    ) -> None:
+        self.heat = 0
+
+    def observe_reveal(self, player_id: int, role: Role) -> None:
+        return
+
+    def on_new_day(self, engine: "GameEngine") -> None:
+        return
+
+
+class NoMemoryVillager(NoMemoryMixin, Villager):
+    """No-memory villager ablation."""
+
+
+class NoMemoryWerewolf(NoMemoryMixin, Werewolf):
+    """No-memory werewolf ablation."""
+
+
+class NoMemoryDoctor(NoMemoryMixin, Doctor):
+    """No-memory doctor ablation."""
+
+
+class NoMemoryDetective(NoMemoryMixin, Detective):
+    """No-memory detective ablation."""
+
+
+class RoleAgnosticAI(AIPlayer):
+    """Ablation profile that removes most role-specific reasoning heuristics."""
+
+    def __init__(self, player: Player, player_ids: List[int], pack_ids: Optional[List[int]] = None):
+        super().__init__(player, player_ids)
+        self.pack_ids = set(pack_ids or [])
+
+    def vote(self, engine: "GameEngine") -> int:
+        candidates = self._living_candidates(engine)
+        if self.player.role == Role.WEREWOLF:
+            candidates = [pid for pid in candidates if pid not in self.pack_ids]
+        return random.choice(candidates) if candidates else self.player.id
+
+    def night_action(self, engine: "GameEngine") -> Optional[int]:
+        candidates = self._living_candidates(engine)
+        if self.player.role == Role.WEREWOLF:
+            candidates = [pid for pid in candidates if pid not in self.pack_ids]
+        if self.player.role == Role.DETECTIVE:
+            candidates = [pid for pid in candidates if pid != self.player.id]
+        return random.choice(candidates) if candidates else None
+
+
 class GameEngine:
     """Main game engine for Werewolf/Mafia simulation."""
 
-    def __init__(self, num_players: int = 8):
-        self.num_players = max(6, min(12, num_players))
+    def __init__(self, num_players: int = 8, ai_profile: str = "standard"):
+        self.num_players = max(MIN_PLAYER_COUNT, min(MAX_PLAYER_COUNT, num_players))
+        self.ai_profile = ai_profile
         self.day_number = 1
         self.phase = Phase.DAY
         self.winner: Optional[str] = None
@@ -376,6 +517,8 @@ class GameEngine:
         self.logs: List[tuple] = []
         self.last_votes: Dict[int, int] = {}
         self.cached_werewolf_target: Optional[int] = None
+        self.timeline: List[Dict[str, object]] = []
+        self.initial_role_counts: Dict[str, int] = {}
         self._build_roster()
 
     def _build_roster(self) -> None:
@@ -397,8 +540,34 @@ class GameEngine:
             for pid, player in self.players.items()
             if player.role == Role.WEREWOLF
         ]
+
+        self.initial_role_counts = {
+            role.value: count for role, count in Counter(player.role for player in self.players.values()).items()
+        }
+
         for pid, player in self.players.items():
-            if player.role == Role.WEREWOLF:
+            if self.ai_profile == "baseline_random":
+                if player.role == Role.WEREWOLF:
+                    self.ai[pid] = RandomBaselineWerewolf(player, player_ids, pack_ids)
+                else:
+                    self.ai[pid] = RandomBaselineAI(player, player_ids)
+            elif self.ai_profile == "baseline_majority":
+                if player.role == Role.WEREWOLF:
+                    self.ai[pid] = MajorityFollowerWerewolf(player, player_ids, pack_ids)
+                else:
+                    self.ai[pid] = MajorityFollowerAI(player, player_ids)
+            elif self.ai_profile == "ablation_no_memory":
+                if player.role == Role.WEREWOLF:
+                    self.ai[pid] = NoMemoryWerewolf(player, player_ids, pack_ids)
+                elif player.role == Role.DOCTOR:
+                    self.ai[pid] = NoMemoryDoctor(player, player_ids)
+                elif player.role == Role.DETECTIVE:
+                    self.ai[pid] = NoMemoryDetective(player, player_ids)
+                else:
+                    self.ai[pid] = NoMemoryVillager(player, player_ids)
+            elif self.ai_profile == "ablation_role_agnostic":
+                self.ai[pid] = RoleAgnosticAI(player, player_ids, pack_ids)
+            elif player.role == Role.WEREWOLF:
                 self.ai[pid] = Werewolf(player, player_ids, pack_ids)
             elif player.role == Role.DOCTOR:
                 self.ai[pid] = Doctor(player, player_ids)
@@ -575,6 +744,32 @@ class GameEngine:
             )
             cursor += 1.05
 
+        accusation_events = [
+            event
+            for event in script
+            if event.kind == "speech"
+            and isinstance(event.payload.get("dialogue"), Dialogue)
+            and event.payload["dialogue"].kind in ("accuse", "reveal")
+            and event.payload["dialogue"].target_id is not None
+        ]
+        false_accusations = 0
+        for event in accusation_events:
+            dialogue = event.payload["dialogue"]
+            if self.players[dialogue.target_id].role != Role.WEREWOLF:
+                false_accusations += 1
+
+        self.timeline.append(
+            {
+                "phase": Phase.DAY.value,
+                "day": self.day_number,
+                "accusations": len(accusation_events),
+                "false_accusations": false_accusations,
+                "votes": dict(votes),
+                "eliminated": eliminated_id,
+                "eliminated_role": self.players[eliminated_id].role.value if eliminated_id is not None else None,
+            }
+        )
+
         for brain in self.ai.values():
             brain.observe_votes(votes, eliminated_id, self)
             if eliminated_id is not None:
@@ -724,6 +919,21 @@ class GameEngine:
             )
             cursor += 0.20
 
+        self.timeline.append(
+            {
+                "phase": Phase.NIGHT.value,
+                "day": self.day_number,
+                "kill_target": kill_target,
+                "save_target": save_target,
+                "scan_target": scan_target,
+                "kill_succeeded": (
+                    kill_target is not None
+                    and kill_target != save_target
+                    and not self.players[kill_target].is_alive
+                ),
+            }
+        )
+
         self.winner = self.check_winner()
         if self.winner:
             script.append(ScriptEvent(cursor, "winner", {"winner": self.winner}))
@@ -739,3 +949,40 @@ class GameEngine:
             )
         )
         return script
+
+    def match_summary(self) -> Dict[str, object]:
+        """Return summary statistics for the completed/ongoing match."""
+        alive_by_role = Counter(player.role.value for player in self.living_players())
+        votes_total = 0
+        votes_for_wolves = 0
+        accusations_total = 0
+        false_accusations = 0
+
+        for phase in self.timeline:
+            if phase.get("phase") == Phase.DAY.value:
+                votes = phase.get("votes", {})
+                for _voter, target in votes.items():
+                    votes_total += 1
+                    if self.players[target].role == Role.WEREWOLF:
+                        votes_for_wolves += 1
+                accusations_total += int(phase.get("accusations", 0))
+                false_accusations += int(phase.get("false_accusations", 0))
+
+        role_survival_rate = {}
+        for role_name, initial_count in self.initial_role_counts.items():
+            survivors = alive_by_role.get(role_name, 0)
+            role_survival_rate[role_name] = survivors / initial_count if initial_count else 0.0
+
+        return {
+            "winner": self.winner,
+            "ai_profile": self.ai_profile,
+            "num_players": self.num_players,
+            "day_number": self.day_number,
+            "total_phases": len(self.timeline),
+            "vote_accuracy": (votes_for_wolves / votes_total) if votes_total else 0.0,
+            "false_accusation_rate": (
+                false_accusations / accusations_total if accusations_total else 0.0
+            ),
+            "role_survival_rate": role_survival_rate,
+            "timeline": self.timeline,
+        }
