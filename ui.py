@@ -617,7 +617,8 @@ class GameUI:
                 MovingIconAnimation(
                     source_id,
                     target_id,
-                    self.images.get("werewolf_effect"),
+                    self.images.get("werewolf_small")
+                    or self.images.get("werewolf_raw"),
                 )
             )
         elif kind == "shield":
