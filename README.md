@@ -128,7 +128,7 @@ Werewolf (also called Mafia) is a deduction game where:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/Parag1337/WereWolf-AI-Game.git
+https://github.com/AkshUpase/WereWolf-AI-.git
 cd WereWolf-AI-Game
 ```
 
