@@ -265,10 +265,13 @@ class Doctor(AIPlayer):
 
     def night_action(self, engine: "GameEngine") -> Optional[int]:
         living = engine.living_ids()
-        candidates = [pid for pid in living if pid != self.last_saved]
+        candidates = [pid for pid in living if pid != self.last_saved and pid != self.player.id]
         if not candidates:
-            candidates = living
+            candidates = [pid for pid in living if pid != self.player.id]
 
+        if not candidates:
+            return None
+        
         revealed_detectives = [
             pid
             for pid in candidates
