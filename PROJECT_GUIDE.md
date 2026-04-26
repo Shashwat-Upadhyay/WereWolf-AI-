@@ -757,6 +757,32 @@ DetectiveRevealAnimation (0.8 seconds)
 
 ---
 
+## 🧪 Testing & Performance Audit
+
+To ensure standard compliance and extreme reliability for AI-driven behaviors, the codebase includes native tooling and benchmarks designed to harden our game logic. 
+
+### Pytest Evaluation Suite
+Located structurally in the `/tests` boundary, our pytest architecture prevents logic regressions and catches broken UI bonds natively.
+- `tests/conftest.py`: Bootstraps our environment with decoupled `tkinter.Tk` mocks avoiding recursive rendering loads during CI runs, allowing completely headless UI tests.
+- `tests/test_engine.py`: Proves fundamental bounds (day transitions scaling logic, checks for zero-player crashes silently handled by role distributions limits).
+- `tests/test_ai.py`: Validates extreme behaviors utilizing parameterized tests against empty opponent vectors matching absolute trust minimums accurately.
+
+Run the test suite globally using standard modules from the project root:
+```bash
+python -m pytest tests/
+```
+
+### $O(n)$ Native Algorithmic Optimizations
+**Engine Logic Speedups** (`engine.py`)
+Previously, calculating `average_suspicion()` during target determination invoked nested $O(n^2)$ lookup matrices against active modules, significantly straining large player rosters or concurrent operations natively. We have refactored this block directly to output calculated targets matching linear mappings in $O(n)$ time! Instead of iteratively fetching traits across targets, we traverse candidates precisely *once*, building a `defaultdict` matrix. 
+
+### UI Rendering Stability
+**Frame Drops & Memory Bounds (`ui.py`)** 
+Heavy bounds updating logic triggers a Garbage Collection payload whenever a resize occurs. 
+The canvas resizer logic (`_on_scene_resize`) has been **debounced**. It explicitly ignores subtle sub-15 pixel bounds variations caused by micro-drifts from OS-level constraints natively, restricting memory cache clearouts only when user intention is definitively scaling boundaries. 
+
+---
+
 ## 📚 Summary: The Complete Picture
 
 ```

@@ -673,6 +673,25 @@ It's always one of the two above.
 
 ---
 
+## 🧪 How Do We Know It Works? (The Tests!)
+
+When you build a big LEGO castle, you have to push it a bit to make sure it doesn't fall down, right? We do the same thing with this game!
+
+### We Built a Testing Room 🏢
+Inside a folder named `/tests/`, we have special mini-programs that check if our game is broken:
+- They make sure the UI doesn't freeze the screen (UI Stability check!) 🖼️
+- They check if the AI knows how to vote properly without crashing! 🧠
+- They try to break the rules to see if the game stops them! 🚫
+
+**We run them using a tool called `pytest`**. If we type `python -m pytest tests/` into the terminal, the computer plays thousands of invisible games in one second to make sure everything is perfect! 
+
+### Making the Game SUPER Fast ⚡
+We also made the brain (engine.py) smarter! 
+Before, to figure out who was suspicious, the computer would ask every person about every other person over and over $O(n^2)$. Now, the computer uses a smart math trick $O(n)$ where it only asks everyone ONCE! 
+We also made sure the screen (ui.py) doesn't redraw the background unless the window actually gets resized enough to matter (we added a 15-pixel "chill out" zone). It makes the game super fast and happy! 🏎️
+
+---
+
 ## 🎯 Quick Quiz (Test What You Learned!)
 
 ### Question 1: What does main.py do?
