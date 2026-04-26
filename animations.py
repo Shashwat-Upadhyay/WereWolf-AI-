@@ -219,6 +219,7 @@ class MovingIconAnimation(Animation):
         self.target_id = target_id
         self.image = image
         self.image_id = None
+        self.trail_ids: list[int] = []
 
     def start(self, ui: "GameUI") -> None:
         super().start(ui)
@@ -232,6 +233,11 @@ class MovingIconAnimation(Animation):
             )
         else:
             self.image_id = ui.scene.create_image(0, 0, image=self.image)
+        for _ in range(3):
+            trail = ui.scene.create_oval(
+                0, 0, 0, 0, fill=COLORS["red"], outline="", stipple="gray50"
+            )
+            self.trail_ids.append(trail)
 
     def update(self, ui: "GameUI", progress: float) -> None:
         sx, sy = ui.player_position(self.source_id)
@@ -240,9 +246,27 @@ class MovingIconAnimation(Animation):
         x = lerp(sx, tx, ease_out_cubic(progress))
         y = lerp(sy, ty, ease_out_cubic(progress)) - arc
         ui.scene.coords(self.image_id, x, y)
+        for index, trail in enumerate(self.trail_ids):
+            lag = max(0.0, progress - (index + 1) * 0.12)
+            trail_x = lerp(sx, tx, ease_out_cubic(lag))
+            trail_y = lerp(sy, ty, ease_out_cubic(lag)) - math.sin(lag * math.pi) * 40
+            radius = max(4.0, 9.0 - index * 2.0)
+            ui.scene.coords(
+                trail,
+                trail_x - radius,
+                trail_y - radius,
+                trail_x + radius,
+                trail_y + radius,
+            )
+            ui.scene.itemconfigure(
+                trail,
+                stipple="gray25" if index == 0 else "gray50",
+            )
 
     def finish(self, ui: "GameUI") -> None:
         ui.scene.delete(self.image_id)
+        for trail in self.trail_ids:
+            ui.scene.delete(trail)
         super().finish(ui)
 
 
@@ -481,4 +505,128 @@ class WinnerBannerAnimation(Animation):
         )
 
     def finish(self, ui: "GameUI") -> None:
+        super().finish(ui)
+
+
+class PhaseTitleAnimation(Animation):
+    """Large phase title overlay animation."""
+
+    def __init__(self, phase: Phase):
+        super().__init__(1.1)
+        self.phase = phase
+        self.text_id = None
+
+    def start(self, ui: "GameUI") -> None:
+        super().start(ui)
+        width, height = ui._scene_dimensions()
+        text = "DAWN BREAKS" if self.phase == Phase.DAY else "NIGHT FALLS"
+        color = COLORS["yellow"] if self.phase == Phase.DAY else COLORS["blue"]
+        self.text_id = ui.scene.create_text(
+            width / 2,
+            height * 0.25,
+            text=text,
+            fill=color,
+            font=("Segoe UI", 8, "bold"),
+        )
+
+    def update(self, ui: "GameUI", progress: float) -> None:
+        width, height = ui._scene_dimensions()
+        lift = 12 * math.sin(progress * math.pi)
+        size = 8 + int(24 * ease_out_back(min(1.0, progress / 0.65)))
+        ui.scene.coords(self.text_id, width / 2, height * 0.25 - lift)
+        ui.scene.itemconfigure(self.text_id, font=("Segoe UI", size, "bold"))
+        if progress > 0.6:
+            ui.scene.itemconfigure(
+                self.text_id,
+                stipple="gray50" if progress < 0.8 else "gray25",
+            )
+
+    def finish(self, ui: "GameUI") -> None:
+        ui.scene.delete(self.text_id)
+        super().finish(ui)
+
+
+class ImpactBurstAnimation(Animation):
+    """Burst animation for kill/elimination events."""
+
+    def __init__(self, player_id: int, color: str):
+        super().__init__(0.85)
+        self.player_id = player_id
+        self.color = color
+        self.ring_a = None
+        self.ring_b = None
+
+    def start(self, ui: "GameUI") -> None:
+        super().start(ui)
+        self.ring_a = ui.scene.create_oval(0, 0, 0, 0, outline=self.color, width=4)
+        self.ring_b = ui.scene.create_oval(
+            0, 0, 0, 0, outline=self.color, width=2, stipple="gray50"
+        )
+
+    def update(self, ui: "GameUI", progress: float) -> None:
+        x, y = ui.player_position(self.player_id)
+        r1 = 14 + 70 * ease_out_cubic(progress)
+        r2 = 8 + 48 * ease_out_cubic(min(1.0, progress * 1.4))
+        ui.scene.coords(self.ring_a, x - r1, y - r1, x + r1, y + r1)
+        ui.scene.coords(self.ring_b, x - r2, y - r2, x + r2, y + r2)
+        ui.scene.itemconfigure(self.ring_a, width=max(1, int(4 - progress * 3)))
+        ui.scene.itemconfigure(self.ring_b, width=max(1, int(3 - progress * 2)))
+
+    def finish(self, ui: "GameUI") -> None:
+        ui.scene.delete(self.ring_a)
+        ui.scene.delete(self.ring_b)
+        super().finish(ui)
+
+
+class ScenePulseAnimation(Animation):
+    """Fullscreen pulse overlay with optional title text."""
+
+    def __init__(self, color: str, text: str = "", duration: float = 0.7):
+        super().__init__(duration)
+        self.color = color
+        self.text = text
+        self.overlay_id = None
+        self.text_id = None
+
+    def start(self, ui: "GameUI") -> None:
+        super().start(ui)
+        width, height = ui._scene_dimensions()
+        self.overlay_id = ui.scene.create_rectangle(
+            0, 0, width, height, fill=self.color, outline="", stipple="gray50"
+        )
+        if self.text:
+            self.text_id = ui.scene.create_text(
+                width / 2,
+                height * 0.18,
+                text=self.text,
+                fill=COLORS["text"],
+                font=("Segoe UI", 14, "bold"),
+            )
+
+    def update(self, ui: "GameUI", progress: float) -> None:
+        width, height = ui._scene_dimensions()
+        ui.scene.coords(self.overlay_id, 0, 0, width, height)
+        if progress < 0.25:
+            stipple = "gray75"
+        elif progress < 0.45:
+            stipple = "gray50"
+        elif progress < 0.65:
+            stipple = "gray25"
+        else:
+            stipple = "gray12"
+        ui.scene.itemconfigure(self.overlay_id, stipple=stipple)
+        if self.text_id is not None:
+            size = 12 + int(10 * ease_out_cubic(min(1.0, progress * 1.3)))
+            ui.scene.coords(self.text_id, width / 2, height * 0.18)
+            ui.scene.itemconfigure(self.text_id, font=("Segoe UI", size, "bold"))
+            if progress > 0.6:
+                ui.scene.itemconfigure(
+                    self.text_id,
+                    stipple="gray50" if progress < 0.8 else "gray25",
+                )
+
+    def finish(self, ui: "GameUI") -> None:
+        ui.scene.delete(self.overlay_id)
+        if self.text_id is not None:
+            ui.scene.delete(self.text_id)
         super().finish(ui)

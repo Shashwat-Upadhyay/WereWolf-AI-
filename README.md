@@ -110,11 +110,14 @@ Werewolf (also called Mafia) is a deduction game where:
 - **Dynamic Backgrounds**: Day/Night visual transitions
 - **Player Avatar Display**: Visual representation of each player
 - **Animated Events**: Vote arrows, shield flashes, reveal pulses
+- **Cinematic Event Overlays**: Hunt/rescue pulses, phase title transitions, impact bursts
 - **Color-Coded Roles**: Each role has a distinct color in the UI
 
 ### Game Features
 - **Auto-play Mode**: Let the game play itself without interaction
 - **Manual Control**: Step through each phase with keyboard controls
+- **Speed Control**: 0.5x to 2.0x pace for animations/script playback and autoplay timing
+- **Built-in Sound Cues**: Event beeps for kills, rescues, phase changes, and winner reveal
 - **Game Logging**: Complete transcript of all actions and dialogue
 - **Player Selection**: Click players to view their suspicion meters
 - **Live Suspicion Meter**: Real-time visualization of how suspicious each player is
@@ -201,6 +204,7 @@ A window will open with:
 | **Space** or **F5** | Advance to next phase | Move game forward |
 | **F6** | Toggle Auto-play | Let AI play automatically |
 | **F2** | Start New Game | Reset with new roles |
+| **F7 / F8** | Decrease / Increase speed | Control animation and script pace |
 | **Click Player Name** | Select player | View their suspicion meter |
 | **Mouse Scroll** | Scroll game log | Read past messages |
 

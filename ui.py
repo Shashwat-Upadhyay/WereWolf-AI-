@@ -13,9 +13,12 @@ from animations import (
     AnimationManager,
     BackgroundTransitionAnimation,
     DeathAnimation,
+    ImpactBurstAnimation,
     MovingIconAnimation,
+    PhaseTitleAnimation,
     RevealPulseAnimation,
     ScanRingAnimation,
+    ScenePulseAnimation,
     ShieldFlashAnimation,
     SpeechBubbleAnimation,
     VoteArrowAnimation,
@@ -37,6 +40,37 @@ from models import Dialogue, Phase, ScriptEvent
 from utils import clamp, resolve_asset_path
 
 
+class UISoundManager:
+    """Minimal built-in sound cue manager using Tk bell patterns."""
+
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.last_play: Dict[str, float] = defaultdict(float)
+
+    def _beep(self, count: int, interval_ms: int = 90) -> None:
+        for i in range(max(1, count)):
+            self.root.after(i * interval_ms, self.root.bell)
+
+    def play(self, cue: str) -> None:
+        now = time.perf_counter()
+        if now - self.last_play[cue] < 0.15:
+            return
+        self.last_play[cue] = now
+
+        patterns = {
+            "kill_move": (2, 80),
+            "death_night": (3, 70),
+            "death_vote": (2, 95),
+            "save": (2, 120),
+            "shield": (1, 90),
+            "phase_night": (1, 90),
+            "phase_day": (1, 90),
+            "winner": (4, 80),
+        }
+        count, interval = patterns.get(cue, (1, 90))
+        self._beep(count, interval)
+
+
 class GameUI:
     """Main UI for the game."""
 
@@ -56,11 +90,13 @@ class GameUI:
         self.auto_play = False
         self.auto_delay = AUTO_PLAY_DELAY
         self.next_auto_time = 0.0
+        self.speed_multiplier = 1.0
         self.frame_time = time.perf_counter()
         self.display_phase = self.engine.phase
         self.display_day = self.engine.day_number
         self.focus_player_id = 1
         self.scene_size = (1000, 720)
+        self.sounds = UISoundManager(root)
 
         self.images: Dict[str, tk.PhotoImage] = {}
         self.scene_image_cache: Dict[Tuple[str, int, int], tk.PhotoImage] = {}
@@ -72,6 +108,7 @@ class GameUI:
         self.phase_var = tk.StringVar()
         self.day_var = tk.StringVar()
         self.status_var = tk.StringVar()
+        self.speed_var = tk.DoubleVar(value=self.speed_multiplier)
 
         self._load_images()
         self._build_layout()
@@ -87,6 +124,8 @@ class GameUI:
         self.root.bind("<F5>", lambda _e: self.next_phase())
         self.root.bind("<F6>", lambda _e: self.toggle_auto())
         self.root.bind("<F2>", lambda _e: self.new_game())
+        self.root.bind("<F7>", lambda _e: self.adjust_speed(-0.1))
+        self.root.bind("<F8>", lambda _e: self.adjust_speed(0.1))
         self.root.bind("<space>", lambda _e: self.next_phase())
 
         self._loop()
@@ -320,9 +359,35 @@ class GameUI:
         )
         self.new_button.pack(side=tk.LEFT, padx=8, pady=12)
 
+        speed_frame = tk.Frame(bottom, bg=COLORS["panel"])
+        speed_frame.pack(side=tk.LEFT, padx=(14, 6), pady=6)
+        tk.Label(
+            speed_frame,
+            text="Speed (F7/F8)",
+            bg=COLORS["panel"],
+            fg=COLORS["text"],
+            font=("Segoe UI", 9, "bold"),
+        ).pack(anchor="w")
+        self.speed_scale = tk.Scale(
+            speed_frame,
+            from_=0.5,
+            to=2.0,
+            resolution=0.1,
+            orient=tk.HORIZONTAL,
+            variable=self.speed_var,
+            command=self._on_speed_change,
+            bg=COLORS["panel"],
+            fg=COLORS["muted"],
+            highlightthickness=0,
+            troughcolor=COLORS["surface2"],
+            activebackground=COLORS["blue"],
+            length=180,
+        )
+        self.speed_scale.pack(anchor="w")
+
         ttk.Label(
             bottom,
-            text="Animated game loop uses root.after()",
+            text="Animated game loop uses root.after() • Speed 0.5x-2.0x",
             background=COLORS["panel"],
             foreground=COLORS["muted"],
             font=("Segoe UI", 10),
@@ -510,7 +575,11 @@ class GameUI:
         self.phase_var.set(f"Phase: {phase.value}")
         self.day_var.set(f"Day: {day_number}")
         self.status_var.set(
-            "Busy animating" if self.is_busy else "Ready"
+            (
+                f"Busy animating • Speed {self.speed_multiplier:.1f}x"
+                if self.is_busy
+                else f"Ready • Speed {self.speed_multiplier:.1f}x"
+            )
         )
         scene_w, scene_h = self._scene_dimensions()
         self.scene.coords(self.background_id, scene_w / 2, scene_h / 2)
@@ -554,8 +623,27 @@ class GameUI:
     def toggle_auto(self) -> None:
         """Toggle auto play."""
         self.auto_play = not self.auto_play
-        self.next_auto_time = time.perf_counter() + self.auto_delay
+        self.next_auto_time = time.perf_counter() + self._effective_auto_delay()
         self._sync_buttons()
+
+    def _effective_auto_delay(self) -> float:
+        """Return autoplay delay adjusted by speed."""
+        return max(0.15, self.auto_delay / max(0.5, self.speed_multiplier))
+
+    def _on_speed_change(self, _value: str) -> None:
+        """Handle speed slider updates."""
+        self.speed_multiplier = clamp(float(self.speed_var.get()), 0.5, 2.0)
+        self.speed_var.set(self.speed_multiplier)
+        self.status_var.set(f"Ready • Speed {self.speed_multiplier:.1f}x")
+        if self.auto_play:
+            self.next_auto_time = (
+                time.perf_counter() + self._effective_auto_delay()
+            )
+
+    def adjust_speed(self, delta: float) -> None:
+        """Increase/decrease speed via keyboard shortcuts."""
+        self.speed_var.set(clamp(self.speed_var.get() + delta, 0.5, 2.0))
+        self._on_speed_change("")
 
     def _sync_buttons(self) -> None:
         """Update button states."""
@@ -567,7 +655,11 @@ class GameUI:
             state=tk.DISABLED if self.is_busy else tk.NORMAL
         )
         self.status_var.set(
-            "Busy animating" if self.is_busy else "Ready"
+            (
+                f"Busy animating • Speed {self.speed_multiplier:.1f}x"
+                if self.is_busy
+                else f"Ready • Speed {self.speed_multiplier:.1f}x"
+            )
         )
 
     def next_phase(self) -> None:
@@ -613,6 +705,7 @@ class GameUI:
                 f"The werewolves stalk Player {target_id} in the dark.",
                 "kill",
             )
+            self.sounds.play("kill_move")
             self.animations.add(
                 MovingIconAnimation(
                     source_id,
@@ -621,6 +714,9 @@ class GameUI:
                     or self.images.get("werewolf_raw"),
                 )
             )
+            self.animations.add(
+                ScenePulseAnimation(COLORS["red"], "HUNT", duration=0.42)
+            )
         elif kind == "shield":
             target_id = int(payload["target"])
             if payload.get("saved"):
@@ -628,6 +724,12 @@ class GameUI:
                     f"A doctor shield wraps around Player {target_id}.",
                     "save",
                 )
+                self.sounds.play("save")
+                self.animations.add(
+                    ScenePulseAnimation(COLORS["green"], "RESCUED", duration=0.48)
+                )
+            else:
+                self.sounds.play("shield")
             self.animations.add(ShieldFlashAnimation(target_id))
         elif kind == "scan":
             target_id = int(payload["target"])
@@ -642,11 +744,14 @@ class GameUI:
             reason = payload.get("reason", "")
             if reason == "night":
                 self.log(f"Player {player_id} falls during the night.", "kill")
+                self.sounds.play("death_night")
             else:
                 self.log(
                     f"The village eliminates Player {player_id}.",
                     "vote",
                 )
+                self.sounds.play("death_vote")
+            self.animations.add(ImpactBurstAnimation(player_id, COLORS["red"]))
             self.animations.add(DeathAnimation(player_id))
         elif kind == "reveal":
             player_id = int(payload["player"])
@@ -656,12 +761,18 @@ class GameUI:
         elif kind == "phase_transition":
             phase: Phase = payload["phase"]  # type: ignore
             day_number = int(payload["day"])
+            if phase == Phase.NIGHT:
+                self.sounds.play("phase_night")
+            else:
+                self.sounds.play("phase_day")
             self.animations.add(
                 BackgroundTransitionAnimation(phase, day_number)
             )
+            self.animations.add(PhaseTitleAnimation(phase))
         elif kind == "winner":
             winner = str(payload["winner"])
             self.log(f"{winner} win the match.", "system")
+            self.sounds.play("winner")
             self.animations.add(WinnerBannerAnimation(winner))
         elif kind == "log":
             self.log(
@@ -674,7 +785,7 @@ class GameUI:
         if not self.is_busy:
             return
 
-        self.script_elapsed += dt
+        self.script_elapsed += dt * self.speed_multiplier
         while (
             self.script_index < len(self.script)
             and self.script[self.script_index].at <= self.script_elapsed
@@ -784,7 +895,7 @@ class GameUI:
 
     def _update_scene(self, dt: float) -> None:
         """Update canvas scene rendering."""
-        self.animations.update(self, dt)
+        self.animations.update(self, dt * self.speed_multiplier)
 
         scene_w, scene_h = self._scene_dimensions()
         center_x = scene_w / 2
@@ -1054,6 +1165,6 @@ class GameUI:
             and now >= self.next_auto_time
         ):
             self.next_phase()
-            self.next_auto_time = now + self.auto_delay
+            self.next_auto_time = now + self._effective_auto_delay()
 
         self.root.after(ANIMATION_FRAME_RATE, self._loop)
