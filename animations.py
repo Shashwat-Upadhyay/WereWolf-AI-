@@ -4,7 +4,7 @@ Animation classes for game visual effects.
 
 import math
 import tkinter as tk
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from config import COLORS
 from models import Phase, Role
@@ -219,7 +219,7 @@ class MovingIconAnimation(Animation):
         self.target_id = target_id
         self.image = image
         self.image_id = None
-        self.trail_ids: list[int] = []
+        self.trail_ids: List[int] = []
 
     def start(self, ui: "GameUI") -> None:
         super().start(ui)
@@ -526,7 +526,7 @@ class PhaseTitleAnimation(Animation):
             height * 0.25,
             text=text,
             fill=color,
-            font=("Segoe UI", 8, "bold"),
+            font=("Segoe UI", 16, "bold"),
         )
 
     def update(self, ui: "GameUI", progress: float) -> None:
