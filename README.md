@@ -750,6 +750,7 @@ Have questions or found a bug?
 
 ## 👨‍💻 Made by
 
+- Shashwat Upadhyay
 - Aksh Upase
 - Vandan Sharma
 
